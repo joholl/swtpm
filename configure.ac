@@ -159,7 +159,16 @@ if test $? -ne 0; then
 fi
 AC_SUBST([LIBTASN1_LIBS])
 
-LIBTPMS_LIBS=$(pkg-config --libs libtpms)
+AC_ARG_ENABLE([non-pcclient],
+              AS_HELP_STRING([--disable-non-pcclient], [Disable features not mandatory for pc client TPMs]),,
+              [enable_non_pcclient=yes])
+AS_IF([test "x$enable_non_pcclient" = "xyes"],
+      [libtpms="libtpms"],
+      [libtpms="libtpms-pcclient"]
+       AC_MSG_RESULT(Building with pc client only feature set.))
+AM_CONDITIONAL(WITH_PCCLIENT, [test "x$enable_non_pcclient" != "xyes"]),
+
+LIBTPMS_LIBS=$(pkg-config --libs $libtpms)
 if test $? -ne 0; then
 	AC_MSG_ERROR("Is libtpms-devel installed? -- could not get libs for libtpms")
 fi

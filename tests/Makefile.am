@@ -11,6 +11,12 @@ TESTS_ENVIRONMENT = \
   abs_top_builddir=`cd '$(top_builddir)'; pwd` \
   abs_top_srcdir=`cd '$(top_srcdir)'; pwd`
 
+if WITH_PCCLIENT
+TESTS_ENVIRONMENT += WITH_PCCLIENT='yes'
+else
+TESTS_ENVIRONMENT += WITH_PCCLIENT='no'
+endif # WITH_PCCLIENT
+
 TESTS = \
 	test_vtpm_proxy \
 	test_tpm2_vtpm_proxy

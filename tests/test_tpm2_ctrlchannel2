@@ -5,6 +5,12 @@
 ROOT=${abs_top_builddir:-$(dirname "$0")/..}
 TESTDIR=${abs_top_testdir:-$(dirname "$0")}
 
+if [ "$WITH_PCCLIENT" != "yes" ]; then
+	pcr_cnt_hex='19'	# dec: 25 (21 non-TCB PCRs + 4 hash algs for DRTM PCRs)
+else
+	pcr_cnt_hex='17'	# dec: 23 (21 non-TCB PCRs + 2 hash algs for DRTM PCRs)
+fi
+
 SWTPM=swtpm
 SWTPM_EXE=${SWTPM_EXE:-$ROOT/src/swtpm/$SWTPM}
 SWTPM_IOCTL=${SWTPM_IOCTL:-$ROOT/src/swtpm_ioctl/swtpm_ioctl}
@@ -270,7 +276,7 @@ exec 100<>/dev/tcp/localhost/65532
 #                         length         CC            count       hashalg         sz
 echo -en '\x80\x01\x00\x00\x00\x14\x00\x00\x01\x7e\x00\x00\x00\x01\x00\x0b\x03\x00\x00\x02' >&100
 RES=$(cat <&100 | od -t x1 -A n | tr -d "\n")
-exp=' 80 01 00 00 00 3e 00 00 00 00 00 00 00 19 00 00 00 01 00 0b 03 00 00 02 00 00 00 01 00 20 e5 17 e3 9b 10 a3 5b 3b b7 29 95 79 4b c6 4a 07 f8 bc b0 bd e6 bb 31 ad 35 27 fb 6f 64 f8 4c b9'
+exp=" 80 01 00 00 00 3e 00 00 00 00 00 00 00 $pcr_cnt_hex 00 00 00 01 00 0b 03 00 00 02 00 00 00 01 00 20 e5 17 e3 9b 10 a3 5b 3b b7 29 95 79 4b c6 4a 07 f8 bc b0 bd e6 bb 31 ad 35 27 fb 6f 64 f8 4c b9"
 if [ "$RES" != "$exp" ]; then
 	echo "Error: (1) Did not get expected result from TPM_PCRRead(17)"
 	echo "expected: $exp"
@@ -340,14 +346,19 @@ echo "OK"
 # Test 3: test the control channel on the socket tpm: resume encrypted state
 
 # copy all the state files
-cp ${TESTDIR}/data/tpm2state2/* ${TPMDIR}
+if [ "$WITH_PCCLIENT" != "yes" ]; then
+	STATEDIR=${TESTDIR}/data/tpm2state2
+else
+	STATEDIR=${TESTDIR}/data/tpm2state2-pcclient
+fi
+cp ${STATEDIR}/* ${TPMDIR}
 
 $SWTPM_EXE socket \
 	--server port=65532,disconnect=true \
 	--tpmstate dir=$TPMDIR \
 	--pid file=$PID_FILE \
 	--ctrl type=unixio,path=$SOCK_PATH \
-	--key pwdfile=${TESTDIR}/data/tpm2state2/pwdfile.txt,kdf=sha512 \
+	--key pwdfile=${STATEDIR}/pwdfile.txt,kdf=sha512 \
 	--tpm2 \
 	--flags not-need-init \
 	${SWTPM_TEST_SECCOMP_OPT} &
