@@ -1123,9 +1123,10 @@ int main(int argc, char *argv[])
 
     } else if (!strcmp(command, "-h")) {
         if (do_hash_start_data_end(fd, is_chardev, hashdata)) {
+            fprintf(stderr, "hashing failed\n");
             goto exit;
         }
-
+        fprintf(stderr, "hashing succeeded\n");
     } else if (!strcmp(command, "-C")) {
         n = ctrlcmd(fd, PTM_CANCEL_TPM_CMD, &res, 0, sizeof(res));
         if (n < 0) {
@@ -1231,5 +1232,10 @@ int main(int argc, char *argv[])
 
 exit:
     free(tcp_hostname);
+
+    if (command && !strcmp(command, "-h")) {
+        fprintf(stderr, "Exiting with ret=%d\n", ret);
+    }
+
     return ret;
 }
